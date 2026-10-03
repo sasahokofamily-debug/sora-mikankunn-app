@@ -42,6 +42,9 @@
   let messageTimer = 0;
   let aiDistance = 0;
   let aiSpeed = 12.4;
+  let aiLane = 2.7;
+  let aiTargetLane = 2.7;
+  let aiBoostTimer = 0;
   let boostTimer = 0;
   let countdownToken = 0;
   let nextBoostSpawn = 2.5;
@@ -502,6 +505,9 @@
     playerTargetX = 0;
     aiDistance = 0;
     aiSpeed = 12.2 + Math.random() * 0.5;
+    aiLane = 2.7;
+    aiTargetLane = 2.7;
+    aiBoostTimer = 0;
     boostTimer = 0;
     nextBoostSpawn = 4.0;
     keyState.left = false;
@@ -601,30 +607,90 @@
   function moveAIKart(delta, playerSpeed) {
     if (!aiKartGroup) return;
 
-    const relativeBefore = aiDistance - distance;
+    if (aiBoostTimer > 0) aiBoostTimer -= delta;
 
-    // プレイヤーよりほんの少し遅い～同程度。差が開きすぎた時だけ少し追いつく。
-    const targetSpeed = relativeBefore > 18 ? 12.0 : relativeBefore < 4 ? 13.1 : 12.6;
-    aiSpeed += (targetSpeed - aiSpeed) * Math.min(1, 0.9 * delta);
+    // AIが画面外へ飛び出さないよう、プレイヤーとの差で速度を調整。
+    const relativeBefore = aiDistance - distance;
+    let targetSpeed = 12.7;
+    if (relativeBefore > 24) targetSpeed = 10.8;
+    else if (relativeBefore > 16) targetSpeed = 11.8;
+    else if (relativeBefore < -2) targetSpeed = 15.2;
+    else if (relativeBefore < 4) targetSpeed = 13.7;
+    if (aiBoostTimer > 0) targetSpeed += 5.0;
+
+    aiSpeed += (targetSpeed - aiSpeed) * Math.min(1, 1.7 * delta);
     aiDistance += aiSpeed * delta;
+
+    // 万一差が広がりすぎても、見える範囲から消えない。
+    const maxAhead = 30;
+    const maxBehind = -5;
+    if (aiDistance - distance > maxAhead) aiDistance = distance + maxAhead;
+    if (aiDistance - distance < maxBehind) aiDistance = distance + maxBehind;
+
+    chooseAILane();
+
+    // レーン変更は瞬間移動せず、ハンドルを切って滑らかに移動。
+    aiLane += (aiTargetLane - aiLane) * Math.min(1, 2.8 * delta);
 
     const relative = aiDistance - distance;
     aiKartGroup.position.z = 5.0 - relative;
 
-    // AI自身の走行距離から道路中央を求める。
-    // プレイヤー基準の道路中央との差分で、カーブに合わせて左右へ動く。
     const aiRoadX = roadCenter(aiDistance) - roadCenter(distance);
-    aiKartGroup.position.x = aiRoadX + 2.7 + Math.sin(gameTime * 0.42) * 0.12;
+    aiKartGroup.position.x = aiRoadX + aiLane;
     aiKartGroup.position.y = Math.sin(gameTime * 6.5 + 1.4) * 0.012;
-    aiKartGroup.rotation.z = Math.sin(gameTime * 0.42) * -0.018;
+
+    const steerAmount = aiTargetLane - aiLane;
+    aiKartGroup.rotation.z = clamp(-steerAmount * 0.07, -0.12, 0.12);
 
     const aiRoadNow = roadCenter(aiDistance);
     const aiRoadAhead = roadCenter(aiDistance + 2.5);
-    aiKartGroup.rotation.y = Math.atan2(aiRoadAhead - aiRoadNow, 2.5);
+    aiKartGroup.rotation.y = Math.atan2(aiRoadAhead - aiRoadNow, 2.5)
+      + clamp(-steerAmount * 0.045, -0.10, 0.10);
 
-    aiKartGroup.visible = aiKartGroup.position.z > -55 && aiKartGroup.position.z < 12;
+    aiKartGroup.visible = true;
   }
 
+  function chooseAILane() {
+    const lanes = [-2.7, 0, 2.7];
+    const aiZ = aiKartGroup.position.z;
+
+    const dangerInLane = (lane) => entities.some((entity) => {
+      if (entity.type !== 'obstacle') return false;
+      const dz = aiZ - entity.mesh.position.z;
+      return dz > 0 && dz < 16 && Math.abs(entity.laneOffset - lane) < 1.1;
+    });
+
+    // まず、近くにあるブースト床を探す。
+    let boostChoice = null;
+    let nearestBoost = Infinity;
+    entities.forEach((entity) => {
+      if (entity.type !== 'boost') return;
+      const dz = aiZ - entity.mesh.position.z;
+      if (dz > 0 && dz < 24 && dz < nearestBoost && !dangerInLane(entity.laneOffset)) {
+        nearestBoost = dz;
+        boostChoice = nearestLane(entity.laneOffset);
+      }
+    });
+
+    if (boostChoice !== null) {
+      aiTargetLane = boostChoice;
+      return;
+    }
+
+    // 今いるレーンの前に障害物があれば、安全な隣のレーンへ。
+    if (dangerInLane(aiTargetLane)) {
+      const safe = lanes
+        .filter((lane) => !dangerInLane(lane))
+        .sort((a, b) => Math.abs(a - aiLane) - Math.abs(b - aiLane));
+      if (safe.length) aiTargetLane = safe[0];
+    }
+  }
+
+  function nearestLane(value) {
+    return laneX.reduce((best, lane) =>
+      Math.abs(lane - value) < Math.abs(best - value) ? lane : best
+    , laneX[0]);
+  }
 
   function roadCenter(worldDistance) {
     return Math.sin(worldDistance / 46) * 2.0
@@ -772,12 +838,21 @@
         entity.mesh.position.y = -0.05 + Math.sin(entity.spin * 2) * 0.12;
       }
 
-      if (entity.type === 'obstacle' && aiKartGroup && aiKartGroup.visible) {
+      if (aiKartGroup) {
         const aiDx = Math.abs(entity.mesh.position.x - aiKartGroup.position.x);
         const aiDz = Math.abs(entity.mesh.position.z - aiKartGroup.position.z);
-        if (aiDx < 1.25 && aiDz < 1.35) {
-          aiSpeed = 7.0;
-          aiDistance = Math.max(0, aiDistance - 2.5);
+
+        if (entity.type === 'boost' && aiDx < 1.35 && aiDz < 1.75) {
+          aiBoostTimer = Math.max(aiBoostTimer, 1.6);
+          scene.remove(entity.mesh);
+          entities.splice(i, 1);
+          continue;
+        }
+
+        // 避けきれなかった時だけ実際に衝突して減速。
+        if (entity.type === 'obstacle' && aiDx < 1.05 && aiDz < 1.15) {
+          aiSpeed = 6.8;
+          aiDistance = Math.max(distance - 4, aiDistance - 1.8);
           scene.remove(entity.mesh);
           entities.splice(i, 1);
           popMessage('AI HIT!', 500, false);
