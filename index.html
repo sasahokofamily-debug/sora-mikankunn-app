@@ -1,65 +1,9 @@
-<!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>みかんくん 3Dレース</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <main class="app">
-    <section class="title-screen" id="titleScreen">
-      <div class="logo-mark">🍊</div>
-      <h1>みかんくん 3Dレース</h1>
-      <p class="lead">そらくんの絵をもとにした、みかんくんの3Dレースゲーム！</p>
-      <ul class="feature-list">
-        <li>大きなオレンジの顔・緑の葉っぱ</li>
-        <li>黄緑の体に白い「m」</li>
-        <li>赤いマントつき</li>
-        <li>マリオカートみたいな、かんたん3Dレース</li>
-      </ul>
-      <div class="button-row">
-        <button id="startButton">スタート</button>
-      </div>
-      <p class="small-note">操作：← → または A / D で左右移動。みかんを取って、障害物をよけよう。</p>
-    </section>
-
-    <section class="game-screen hidden" id="gameScreen">
-      <header class="status-bar">
-        <div class="status-left">
-          <span class="pill">🍊 みかんくん</span>
-          <span class="pill">three.js レース</span>
-        </div>
-        <div class="status-right">
-          <span class="score-box">スコア <strong id="score">0</strong></span>
-          <span class="score-box">きょり <strong id="distance">0m</strong></span>
-          <span class="score-box">のこり <strong id="lives">3</strong></span>
-        </div>
-      </header>
-
-      <section class="game-card">
-        <div class="canvas-wrap" id="canvasWrap">
-          <div class="floating-message" id="floatingMessage">GO!</div>
-          <div class="overlay-panel hidden" id="gameOverPanel">
-            <h2>ゴール！</h2>
-            <p id="resultText">けっか</p>
-            <button id="restartButton" class="sub-button strong">もういちど</button>
-          </div>
-        </div>
-
-        <div class="controls">
-          <p class="hint">障害物に3回ぶつかると終了。みかんを取ると +10点！</p>
-          <div class="buttons">
-            <button id="leftButton" class="sub-button">← ひだり</button>
-            <button id="rightButton" class="sub-button">みぎ →</button>
-            <button id="restartMiniButton" class="sub-button">リスタート</button>
-          </div>
-        </div>
-      </section>
-    </section>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-  <script src="script.js"></script>
-</body>
-</html>
+<!doctype html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>みかんくん3Dレース</title><link rel="stylesheet" href="style.css"></head><body>
+<main class="app">
+<section id="titleScreen" class="panel"><div class="logo">🍊</div><h1>みかんくん 3Dレース</h1><p>AIカート3台と競争！ カーブとブーストで1位をめざそう。</p><button id="startButton">レーススタート</button><p class="note">← → / A D：左右　Space / BOOST：加速</p></section>
+<section id="gameScreen" class="panel hidden">
+<header class="hud"><span>順位 <b id="rank">1/4</b></span><span>距離 <b id="distance">0m</b></span><span>速度 <b id="speed">0</b></span></header>
+<div id="canvasWrap" class="canvasWrap"><div id="floatingMessage" class="msg">GO!</div><div class="boostMeter">BOOST<div class="bar"><div id="boostFill"></div></div></div><div id="gameOverPanel" class="over hidden"><h2 id="resultTitle">ゴール！</h2><p id="resultText"></p><button id="restartButton">もういちど</button></div></div>
+<div class="controls"><button id="leftButton">←</button><button id="boostButton" class="boost">BOOST</button><button id="rightButton">→</button><button id="restartMiniButton">リスタート</button></div>
+</section></main>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script><script src="script.js"></script></body></html>
