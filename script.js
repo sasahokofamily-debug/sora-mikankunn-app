@@ -502,7 +502,7 @@
     aiDistance = 0;
     aiSpeed = 12.2 + Math.random() * 0.5;
     boostTimer = 0;
-    nextBoostSpawn = 2.5;
+    nextBoostSpawn = 4.0;
     keyState.left = false;
     keyState.right = false;
 
@@ -515,6 +515,11 @@
       const item = entities.pop();
       scene.remove(item.mesh);
     }
+
+    // スタート直後から見えるブースト床を3枚置く。
+    spawnBoostPadAt(-18, -2.7);
+    spawnBoostPadAt(-34, 0);
+    spawnBoostPadAt(-50, 2.7);
 
     gameOverPanel.classList.add('hidden');
     updateHud();
@@ -650,8 +655,12 @@
   }
 
   function spawnBoostPad() {
+    spawnBoostPadAt(-62, randomLane());
+  }
+
+  function spawnBoostPadAt(z, x) {
     const mesh = createBoostPad();
-    mesh.position.set(randomLane(), -1.20, -62);
+    mesh.position.set(x, -1.20, z);
     scene.add(mesh);
     entities.push({ type: 'boost', mesh });
   }
