@@ -41,7 +41,7 @@
   let hitCooldown = 0;
   let messageTimer = 0;
   let aiDistance = 0;
-  let aiSpeed = 12.4;
+  let aiSpeed = 10.8;
   let aiLane = 2.7;
   let aiTargetLane = 2.7;
   let aiBoostTimer = 0;
@@ -504,7 +504,7 @@
     hitCooldown = 0;
     playerTargetX = 0;
     aiDistance = 0;
-    aiSpeed = 12.2 + Math.random() * 0.5;
+    aiSpeed = 10.6 + Math.random() * 0.4;
     aiLane = 2.7;
     aiTargetLane = 2.7;
     aiBoostTimer = 0;
@@ -592,10 +592,9 @@
     playerTargetX = clamp(playerTargetX, -3.2, 3.2);
 
     playerGroup.position.x += (playerTargetX - playerGroup.position.x) * Math.min(1, 10 * delta);
-    playerGroup.rotation.z = -(playerTargetX - playerGroup.position.x) * 0.13;
-    const playerCurveNow = roadCenter(distance);
-    const playerCurveAhead = roadCenter(distance + 2);
-    playerGroup.rotation.y = Math.atan2(playerCurveAhead - playerCurveNow, 2);
+    playerGroup.rotation.z = (playerTargetX - playerGroup.position.x) * 0.13;
+    const steeringYaw = clamp((playerTargetX - playerGroup.position.x) * -0.06, -0.10, 0.10);
+    playerGroup.rotation.y = -roadHeading(distance) + steeringYaw;
     playerGroup.position.y = Math.sin(gameTime * 11) * 0.025;
 
     // カメラも少しだけ左右に追従。高さは変えない。
@@ -611,12 +610,12 @@
 
     // AIが画面外へ飛び出さないよう、プレイヤーとの差で速度を調整。
     const relativeBefore = aiDistance - distance;
-    let targetSpeed = 12.7;
-    if (relativeBefore > 24) targetSpeed = 10.8;
-    else if (relativeBefore > 16) targetSpeed = 11.8;
-    else if (relativeBefore < -2) targetSpeed = 15.2;
-    else if (relativeBefore < 4) targetSpeed = 13.7;
-    if (aiBoostTimer > 0) targetSpeed += 5.0;
+    let targetSpeed = 10.9;
+    if (relativeBefore > 24) targetSpeed = 9.2;
+    else if (relativeBefore > 16) targetSpeed = 10.0;
+    else if (relativeBefore < -2) targetSpeed = 12.0;
+    else if (relativeBefore < 4) targetSpeed = 11.4;
+    if (aiBoostTimer > 0) targetSpeed += 4.2;
 
     aiSpeed += (targetSpeed - aiSpeed) * Math.min(1, 1.7 * delta);
     aiDistance += aiSpeed * delta;
@@ -642,9 +641,7 @@
     const steerAmount = aiTargetLane - aiLane;
     aiKartGroup.rotation.z = clamp(-steerAmount * 0.07, -0.12, 0.12);
 
-    const aiRoadNow = roadCenter(aiDistance);
-    const aiRoadAhead = roadCenter(aiDistance + 2.5);
-    aiKartGroup.rotation.y = Math.atan2(aiRoadAhead - aiRoadNow, 2.5)
+    aiKartGroup.rotation.y = -roadHeading(aiDistance)
       + clamp(-steerAmount * 0.045, -0.10, 0.10);
 
     aiKartGroup.visible = true;
@@ -693,8 +690,14 @@
   }
 
   function roadCenter(worldDistance) {
-    return Math.sin(worldDistance / 46) * 2.0
-      + Math.sin(worldDistance / 105) * 1.35;
+    return Math.sin(worldDistance / 62) * 3.2
+      + Math.sin(worldDistance / 140) * 1.4;
+  }
+
+  function roadHeading(worldDistance) {
+    const sample = 1.5;
+    const dx = roadCenter(worldDistance + sample) - roadCenter(worldDistance - sample);
+    return Math.atan2(dx, sample * 2);
   }
 
   function roadOffsetForZ(z) {
@@ -707,22 +710,26 @@
       segment.position.z += step;
       if (segment.position.z > 30) segment.position.z -= 150;
 
-      const center = roadOffsetForZ(segment.position.z);
-      segment.position.x = center;
+      const ahead = playerGroup.position.z - segment.position.z;
+      const worldPos = distance + ahead;
+      const center = roadCenter(worldPos) - roadCenter(distance);
+      const heading = roadHeading(worldPos) - roadHeading(distance);
 
-      const sampleAhead = roadOffsetForZ(segment.position.z - 2);
-      segment.rotation.y = Math.atan2(sampleAhead - center, 2);
+      segment.position.x = center;
+      segment.rotation.y = -heading;
     });
 
     laneMarkers.forEach((marker) => {
       marker.position.z += step;
       if (marker.position.z > 9) marker.position.z -= 30;
 
-      const center = roadOffsetForZ(marker.position.z);
-      marker.position.x = center;
+      const ahead = playerGroup.position.z - marker.position.z;
+      const worldPos = distance + ahead;
+      const center = roadCenter(worldPos) - roadCenter(distance);
+      const heading = roadHeading(worldPos) - roadHeading(distance);
 
-      const sampleAhead = roadOffsetForZ(marker.position.z - 1.5);
-      marker.rotation.y = Math.atan2(sampleAhead - center, 1.5);
+      marker.position.x = center;
+      marker.rotation.y = -heading;
     });
   }
 
@@ -731,8 +738,16 @@
       tree.position.z += step;
       if (tree.position.z > 12) tree.position.z -= 187;
 
+      const ahead = playerGroup.position.z - tree.position.z;
+      const worldPos = distance + ahead;
+      const center = roadCenter(worldPos) - roadCenter(distance);
+      const heading = roadHeading(worldPos) - roadHeading(distance);
       const side = index % 2 === 0 ? -1 : 1;
-      tree.position.x = roadOffsetForZ(tree.position.z) + side * 8.4;
+
+      const lateralX = Math.cos(heading) * side * 8.4;
+      const lateralZ = Math.sin(heading) * side * 8.4;
+      tree.position.x = center + lateralX;
+      tree.position.z += lateralZ * 0.03;
     });
   }
 
