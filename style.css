@@ -276,3 +276,13 @@ h1 {
 .floating-message.countdown.show {
   transform: translate(-50%, -50%) scale(1);
 }
+
+
+.boost-button {
+  background: #29d6ff;
+  color: #073b4c;
+  box-shadow: 0 5px 0 #1488a6;
+}
+.boost-button:active {
+  box-shadow: 0 2px 0 #1488a6;
+}
