@@ -261,3 +261,18 @@ h1 {
     grid-column: 1 / -1;
   }
 }
+
+
+.floating-message.countdown {
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.92);
+  font-size: clamp(56px, 12vw, 110px);
+  min-width: 1.6em;
+  text-align: center;
+  padding: 8px 24px;
+  background: rgba(255,255,255,0.88);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+}
+.floating-message.countdown.show {
+  transform: translate(-50%, -50%) scale(1);
+}
