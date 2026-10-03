@@ -259,6 +259,7 @@
 
     const character = createMikanCharacter();
     character.position.set(0, -0.32, -0.08);
+    character.rotation.y = Math.PI;
     character.scale.setScalar(0.68);
     playerGroup.add(character);
 
@@ -586,6 +587,9 @@
 
     playerGroup.position.x += (playerTargetX - playerGroup.position.x) * Math.min(1, 10 * delta);
     playerGroup.rotation.z = -(playerTargetX - playerGroup.position.x) * 0.13;
+    const playerCurveNow = roadCenter(distance);
+    const playerCurveAhead = roadCenter(distance + 2);
+    playerGroup.rotation.y = Math.atan2(playerCurveAhead - playerCurveNow, 2);
     playerGroup.position.y = Math.sin(gameTime * 11) * 0.025;
 
     // カメラも少しだけ左右に追従。高さは変えない。
@@ -606,46 +610,73 @@
 
     const relative = aiDistance - distance;
     aiKartGroup.position.z = 5.0 - relative;
-    aiKartGroup.position.x = 2.7 + Math.sin(gameTime * 0.42) * 0.16;
+    aiKartGroup.position.x = roadOffsetForZ(aiKartGroup.position.z) + 2.7 + Math.sin(gameTime * 0.42) * 0.16;
     aiKartGroup.position.y = Math.sin(gameTime * 6.5 + 1.4) * 0.012;
     aiKartGroup.rotation.z = Math.sin(gameTime * 0.42) * -0.018;
-    aiKartGroup.rotation.y = Math.sin(gameTime * 0.22) * 0.012;
+    const aiCenter = roadOffsetForZ(aiKartGroup.position.z);
+    const aiAhead = roadOffsetForZ(aiKartGroup.position.z - 2);
+    aiKartGroup.rotation.y = Math.atan2(aiAhead - aiCenter, 2);
 
     aiKartGroup.visible = aiKartGroup.position.z > -55 && aiKartGroup.position.z < 12;
   }
 
 
+  function roadCenter(worldDistance) {
+    return Math.sin(worldDistance / 46) * 2.0
+      + Math.sin(worldDistance / 105) * 1.35;
+  }
+
+  function roadOffsetForZ(z) {
+    const ahead = playerGroup.position.z - z;
+    return roadCenter(distance + ahead) - roadCenter(distance);
+  }
+
   function moveTrack(step) {
     roadSegments.forEach((segment) => {
       segment.position.z += step;
       if (segment.position.z > 30) segment.position.z -= 150;
+
+      const center = roadOffsetForZ(segment.position.z);
+      segment.position.x = center;
+
+      const sampleAhead = roadOffsetForZ(segment.position.z - 2);
+      segment.rotation.y = Math.atan2(sampleAhead - center, 2);
     });
 
     laneMarkers.forEach((marker) => {
       marker.position.z += step;
       if (marker.position.z > 9) marker.position.z -= 30;
+
+      const center = roadOffsetForZ(marker.position.z);
+      marker.position.x = center;
+
+      const sampleAhead = roadOffsetForZ(marker.position.z - 1.5);
+      marker.rotation.y = Math.atan2(sampleAhead - center, 1.5);
     });
   }
 
   function moveRoadside(step) {
-    roadside.forEach((tree) => {
+    roadside.forEach((tree, index) => {
       tree.position.z += step;
       if (tree.position.z > 12) tree.position.z -= 187;
+
+      const side = index % 2 === 0 ? -1 : 1;
+      tree.position.x = roadOffsetForZ(tree.position.z) + side * 8.4;
     });
   }
 
   function spawnObstacle() {
     const mesh = createObstacle();
-    mesh.position.set(randomLane(), -0.5, -62);
+    mesh.position.set(roadOffsetForZ(-62) + randomLane(), -0.5, -62);
     scene.add(mesh);
-    entities.push({ type: 'obstacle', mesh });
+    entities.push({ type: 'obstacle', mesh, laneOffset: mesh.position.x - roadOffsetForZ(mesh.position.z) });
   }
 
   function spawnItem() {
     const mesh = createMikanItem();
-    mesh.position.set(randomLane(), -0.05, -62);
+    mesh.position.set(roadOffsetForZ(-62) + randomLane(), -0.05, -62);
     scene.add(mesh);
-    entities.push({ type: 'item', mesh, spin: 0 });
+    entities.push({ type: 'item', mesh, spin: 0, laneOffset: mesh.position.x - roadOffsetForZ(mesh.position.z) });
   }
 
   function triggerBoost() {
@@ -660,9 +691,9 @@
 
   function spawnBoostPadAt(z, x) {
     const mesh = createBoostPad();
-    mesh.position.set(x, -1.20, z);
+    mesh.position.set(roadOffsetForZ(z) + x, -1.20, z);
     scene.add(mesh);
-    entities.push({ type: 'boost', mesh });
+    entities.push({ type: 'boost', mesh, laneOffset: mesh.position.x - roadOffsetForZ(mesh.position.z) });
   }
 
   function createBoostPad() {
@@ -725,6 +756,10 @@
     for (let i = entities.length - 1; i >= 0; i -= 1) {
       const entity = entities[i];
       entity.mesh.position.z += speed * delta;
+      if (entity.laneOffset === undefined) {
+        entity.laneOffset = entity.mesh.position.x - roadOffsetForZ(entity.mesh.position.z);
+      }
+      entity.mesh.position.x = roadOffsetForZ(entity.mesh.position.z) + entity.laneOffset;
 
       if (entity.type === 'item') {
         entity.spin += delta * 4.5;
