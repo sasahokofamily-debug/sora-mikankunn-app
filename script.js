@@ -39,8 +39,10 @@
   let gameTime = 0;
   let hitCooldown = 0;
   let messageTimer = 0;
-  let aiDistance = 14;
+  let aiDistance = 0;
   let aiSpeed = 12.4;
+  let boostTimer = 0;
+  let countdownToken = 0;
 
   startButton.addEventListener('click', startGameScreen);
   restartButton.addEventListener('click', resetRace);
@@ -341,7 +343,7 @@
     aiKartGroup.add(body, head, leftEye, rightEye, leftHand, rightHand);
 
     aiKartGroup.scale.setScalar(0.82);
-    aiKartGroup.position.set(1.7, 0, -9);
+    aiKartGroup.position.set(1.7, 0, 5.0);
     scene.add(aiKartGroup);
   }
 
@@ -494,8 +496,9 @@
     gameTime = 0;
     hitCooldown = 0;
     playerTargetX = 0;
-    aiDistance = 14;
+    aiDistance = 0;
     aiSpeed = 12.2 + Math.random() * 0.5;
+    boostTimer = 0;
     keyState.left = false;
     keyState.right = false;
 
@@ -511,14 +514,36 @@
 
     gameOverPanel.classList.add('hidden');
     updateHud();
-    popMessage('GO!');
-    gameRunning = true;
+    gameRunning = false;
     if (clock) clock.getDelta();
+    startCountdown();
+  }
+
+  function startCountdown() {
+    const token = ++countdownToken;
+    const steps = ['3', '2', '1', 'GO!'];
+    let index = 0;
+
+    const showNext = () => {
+      if (token !== countdownToken) return;
+      popMessage(steps[index], 850, true);
+
+      if (steps[index] === 'GO!') {
+        gameRunning = true;
+        return;
+      }
+
+      index += 1;
+      setTimeout(showNext, 900);
+    };
+
+    showNext();
   }
 
   function updateRace(delta) {
-    const speed = 13;
+    const speed = boostTimer > 0 ? 19 : 13;
     gameTime += delta;
+    if (boostTimer > 0) boostTimer -= delta;
     distance += speed * delta;
     spawnTimer += delta;
     if (hitCooldown > 0) hitCooldown -= delta;
@@ -529,10 +554,12 @@
     moveAIKart(delta, speed);
     moveEntities(speed, delta);
 
-    if (spawnTimer > 1.35) {
+    if (spawnTimer > 1.15) {
       spawnTimer = 0;
-      if (Math.random() < 0.62) spawnObstacle();
-      else spawnItem();
+      const roll = Math.random();
+      if (roll < 0.46) spawnObstacle();
+      else if (roll < 0.68) spawnItem();
+      else spawnBoostPad();
     }
 
     updateHud();
@@ -608,6 +635,37 @@
     entities.push({ type: 'item', mesh, spin: 0 });
   }
 
+  function spawnBoostPad() {
+    const mesh = createBoostPad();
+    mesh.position.set(randomLane(), -1.20, -62);
+    scene.add(mesh);
+    entities.push({ type: 'boost', mesh });
+  }
+
+  function createBoostPad() {
+    const group = new THREE.Group();
+    const glowMat = new THREE.MeshStandardMaterial({
+      color: 0x2ad7ff,
+      emissive: 0x075a75,
+      emissiveIntensity: 0.8,
+      roughness: 0.45
+    });
+    const stripeMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x77ddff,
+      emissiveIntensity: 0.35,
+      roughness: 0.35
+    });
+
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.08, 3.0), glowMat);
+    const stripe1 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, 2.65), stripeMat);
+    const stripe2 = stripe1.clone();
+    stripe1.position.set(-0.48, 0.06, 0);
+    stripe2.position.set(0.48, 0.06, 0);
+    group.add(pad, stripe1, stripe2);
+    return group;
+  }
+
   function createObstacle() {
     const group = new THREE.Group();
     const blueMat = new THREE.MeshStandardMaterial({ color: 0x4e63f0, roughness: 0.85 });
@@ -644,10 +702,26 @@
         entity.mesh.position.y = -0.05 + Math.sin(entity.spin * 2) * 0.12;
       }
 
+      if (entity.type === 'obstacle' && aiKartGroup && aiKartGroup.visible) {
+        const aiDx = Math.abs(entity.mesh.position.x - aiKartGroup.position.x);
+        const aiDz = Math.abs(entity.mesh.position.z - aiKartGroup.position.z);
+        if (aiDx < 1.25 && aiDz < 1.35) {
+          aiSpeed = 7.0;
+          aiDistance = Math.max(0, aiDistance - 2.5);
+          scene.remove(entity.mesh);
+          entities.splice(i, 1);
+          popMessage('AI HIT!', 500, false);
+          continue;
+        }
+      }
+
       if (isCollision(entity.mesh.position.x, entity.mesh.position.z, entity.type)) {
         if (entity.type === 'item') {
           score += 10;
           popMessage('+10 みかん！');
+        } else if (entity.type === 'boost') {
+          boostTimer = Math.max(boostTimer, 1.8);
+          popMessage('BOOST!', 650, false);
         } else if (hitCooldown <= 0) {
           lives -= 1;
           hitCooldown = 0.7;
@@ -670,8 +744,8 @@
   function isCollision(x, z, type) {
     const dx = Math.abs(x - playerGroup.position.x);
     const dz = Math.abs(z - playerGroup.position.z);
-    const xLimit = type === 'item' ? 1.15 : 1.25;
-    const zLimit = type === 'item' ? 1.0 : 1.25;
+    const xLimit = type === 'item' ? 1.15 : type === 'boost' ? 1.45 : 1.25;
+    const zLimit = type === 'item' ? 1.0 : type === 'boost' ? 1.8 : 1.25;
     return dx < xLimit && dz < zLimit;
   }
 
@@ -687,11 +761,15 @@
     livesElement.textContent = lives;
   }
 
-  function popMessage(text) {
+  function popMessage(text, duration = 750, large = false) {
     floatingMessage.textContent = text;
+    floatingMessage.classList.toggle('countdown', large);
     floatingMessage.classList.add('show');
     clearTimeout(messageTimer);
-    messageTimer = setTimeout(() => floatingMessage.classList.remove('show'), 750);
+    messageTimer = setTimeout(() => {
+      floatingMessage.classList.remove('show');
+      floatingMessage.classList.remove('countdown');
+    }, duration);
   }
 
   function randomLane() {
