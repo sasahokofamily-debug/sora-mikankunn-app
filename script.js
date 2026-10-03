@@ -610,12 +610,17 @@
 
     const relative = aiDistance - distance;
     aiKartGroup.position.z = 5.0 - relative;
-    aiKartGroup.position.x = roadOffsetForZ(aiKartGroup.position.z) + 2.7 + Math.sin(gameTime * 0.42) * 0.16;
+
+    // AI自身の走行距離から道路中央を求める。
+    // プレイヤー基準の道路中央との差分で、カーブに合わせて左右へ動く。
+    const aiRoadX = roadCenter(aiDistance) - roadCenter(distance);
+    aiKartGroup.position.x = aiRoadX + 2.7 + Math.sin(gameTime * 0.42) * 0.12;
     aiKartGroup.position.y = Math.sin(gameTime * 6.5 + 1.4) * 0.012;
     aiKartGroup.rotation.z = Math.sin(gameTime * 0.42) * -0.018;
-    const aiCenter = roadOffsetForZ(aiKartGroup.position.z);
-    const aiAhead = roadOffsetForZ(aiKartGroup.position.z - 2);
-    aiKartGroup.rotation.y = Math.atan2(aiAhead - aiCenter, 2);
+
+    const aiRoadNow = roadCenter(aiDistance);
+    const aiRoadAhead = roadCenter(aiDistance + 2.5);
+    aiKartGroup.rotation.y = Math.atan2(aiRoadAhead - aiRoadNow, 2.5);
 
     aiKartGroup.visible = aiKartGroup.position.z > -55 && aiKartGroup.position.z < 12;
   }
