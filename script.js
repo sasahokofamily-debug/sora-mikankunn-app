@@ -610,14 +610,16 @@
 
     // AIが画面外へ飛び出さないよう、プレイヤーとの差で速度を調整。
     const relativeBefore = aiDistance - distance;
-    let targetSpeed = 12.2;
-    if (relativeBefore > 24) targetSpeed = 10.8;
-    else if (relativeBefore > 16) targetSpeed = 11.5;
-    else if (relativeBefore < -2) targetSpeed = 13.6;
-    else if (relativeBefore < 4) targetSpeed = 12.9;
+    let targetSpeed = 12.4;
+    if (relativeBefore > 24) targetSpeed = 11.0;
+    else if (relativeBefore > 16) targetSpeed = 11.8;
+    else if (relativeBefore < -8) targetSpeed = 17.2;
+    else if (relativeBefore < -4) targetSpeed = 15.8;
+    else if (relativeBefore < 0) targetSpeed = 14.5;
+    else if (relativeBefore < 4) targetSpeed = 13.4;
     if (aiBoostTimer > 0) targetSpeed += 4.4;
 
-    aiSpeed += (targetSpeed - aiSpeed) * Math.min(1, 1.7 * delta);
+    aiSpeed += (targetSpeed - aiSpeed) * Math.min(1, 3.4 * delta);
     aiDistance += aiSpeed * delta;
 
     // 万一差が広がりすぎても、見える範囲から消えない。
