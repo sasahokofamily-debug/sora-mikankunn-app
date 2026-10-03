@@ -4,6 +4,7 @@
   const restartMiniButton = document.getElementById('restartMiniButton');
   const leftButton = document.getElementById('leftButton');
   const rightButton = document.getElementById('rightButton');
+  const boostButton = document.getElementById('boostButton');
   const titleScreen = document.getElementById('titleScreen');
   const gameScreen = document.getElementById('gameScreen');
   const gameOverPanel = document.getElementById('gameOverPanel');
@@ -43,10 +44,12 @@
   let aiSpeed = 12.4;
   let boostTimer = 0;
   let countdownToken = 0;
+  let nextBoostSpawn = 2.5;
 
   startButton.addEventListener('click', startGameScreen);
   restartButton.addEventListener('click', resetRace);
   restartMiniButton.addEventListener('click', resetRace);
+  boostButton.addEventListener('click', triggerBoost);
 
   bindHold(leftButton, () => keyState.left = true, () => keyState.left = false);
   bindHold(rightButton, () => keyState.right = true, () => keyState.right = false);
@@ -499,6 +502,7 @@
     aiDistance = 0;
     aiSpeed = 12.2 + Math.random() * 0.5;
     boostTimer = 0;
+    nextBoostSpawn = 2.5;
     keyState.left = false;
     keyState.right = false;
 
@@ -556,10 +560,14 @@
 
     if (spawnTimer > 1.15) {
       spawnTimer = 0;
-      const roll = Math.random();
-      if (roll < 0.46) spawnObstacle();
-      else if (roll < 0.68) spawnItem();
-      else spawnBoostPad();
+      if (Math.random() < 0.62) spawnObstacle();
+      else spawnItem();
+    }
+
+    nextBoostSpawn -= delta;
+    if (nextBoostSpawn <= 0) {
+      spawnBoostPad();
+      nextBoostSpawn = 3.2;
     }
 
     updateHud();
@@ -635,6 +643,12 @@
     entities.push({ type: 'item', mesh, spin: 0 });
   }
 
+  function triggerBoost() {
+    if (!gameRunning) return;
+    boostTimer = Math.max(boostTimer, 1.35);
+    popMessage('BOOST!', 650, false);
+  }
+
   function spawnBoostPad() {
     const mesh = createBoostPad();
     mesh.position.set(randomLane(), -1.20, -62);
@@ -657,12 +671,19 @@
       roughness: 0.35
     });
 
-    const pad = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.08, 3.0), glowMat);
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.10, 3.4), glowMat);
     const stripe1 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, 2.65), stripeMat);
     const stripe2 = stripe1.clone();
     stripe1.position.set(-0.48, 0.06, 0);
     stripe2.position.set(0.48, 0.06, 0);
-    group.add(pad, stripe1, stripe2);
+    const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const arrowGeo = new THREE.ConeGeometry(0.28, 0.75, 3);
+    const arrow1 = new THREE.Mesh(arrowGeo, arrowMat);
+    arrow1.rotation.x = Math.PI / 2;
+    arrow1.position.set(0, 0.09, 0.55);
+    const arrow2 = arrow1.clone();
+    arrow2.position.z = -0.45;
+    group.add(pad, stripe1, stripe2, arrow1, arrow2);
     return group;
   }
 
