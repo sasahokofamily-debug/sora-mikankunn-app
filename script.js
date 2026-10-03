@@ -41,7 +41,7 @@
   let hitCooldown = 0;
   let messageTimer = 0;
   let aiDistance = 0;
-  let aiSpeed = 10.8;
+  let aiSpeed = 12.0;
   let aiLane = 2.7;
   let aiTargetLane = 2.7;
   let aiBoostTimer = 0;
@@ -504,7 +504,7 @@
     hitCooldown = 0;
     playerTargetX = 0;
     aiDistance = 0;
-    aiSpeed = 10.6 + Math.random() * 0.4;
+    aiSpeed = 11.8 + Math.random() * 0.4;
     aiLane = 2.7;
     aiTargetLane = 2.7;
     aiBoostTimer = 0;
@@ -610,12 +610,12 @@
 
     // AIが画面外へ飛び出さないよう、プレイヤーとの差で速度を調整。
     const relativeBefore = aiDistance - distance;
-    let targetSpeed = 10.9;
-    if (relativeBefore > 24) targetSpeed = 9.2;
-    else if (relativeBefore > 16) targetSpeed = 10.0;
-    else if (relativeBefore < -2) targetSpeed = 12.0;
-    else if (relativeBefore < 4) targetSpeed = 11.4;
-    if (aiBoostTimer > 0) targetSpeed += 4.2;
+    let targetSpeed = 12.2;
+    if (relativeBefore > 24) targetSpeed = 10.8;
+    else if (relativeBefore > 16) targetSpeed = 11.5;
+    else if (relativeBefore < -2) targetSpeed = 13.6;
+    else if (relativeBefore < 4) targetSpeed = 12.9;
+    if (aiBoostTimer > 0) targetSpeed += 4.4;
 
     aiSpeed += (targetSpeed - aiSpeed) * Math.min(1, 1.7 * delta);
     aiDistance += aiSpeed * delta;
