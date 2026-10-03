@@ -19,6 +19,7 @@
   let renderer;
   let clock;
   let playerGroup;
+  let aiKartGroup;
   let animationId = 0;
   let initialized = false;
   let gameRunning = false;
@@ -38,6 +39,8 @@
   let gameTime = 0;
   let hitCooldown = 0;
   let messageTimer = 0;
+  let aiDistance = 24;
+  let aiSpeed = 19.6;
 
   startButton.addEventListener('click', startGameScreen);
   restartButton.addEventListener('click', resetRace);
@@ -112,6 +115,7 @@
     createTrack();
     createRoadside();
     createPlayer();
+    createAIKart();
 
     window.addEventListener('resize', onResize);
     animate();
@@ -255,6 +259,55 @@
 
     playerGroup.position.set(0, 0, 5.0);
     scene.add(playerGroup);
+  }
+
+
+  function createAIKart() {
+    aiKartGroup = new THREE.Group();
+
+    const blueMat = new THREE.MeshStandardMaterial({ color: 0x4f7cff, roughness: 0.82 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x343a40, roughness: 0.88 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82 });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.96 });
+
+    const base = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.36, 3.25), blueMat);
+    base.position.y = -0.74;
+    base.castShadow = true;
+    aiKartGroup.add(base);
+
+    const seatBack = new THREE.Mesh(new THREE.BoxGeometry(1.08, 0.72, 0.18), darkMat);
+    seatBack.position.set(0, -0.02, -0.62);
+    aiKartGroup.add(seatBack);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.32, 18);
+    [
+      [-1.3, -0.95, 1.0],
+      [1.3, -0.95, 1.0],
+      [-1.3, -0.95, -1.1],
+      [1.3, -0.95, -1.1]
+    ].forEach(([x, y, z]) => {
+      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(x, y, z);
+      wheel.castShadow = true;
+      aiKartGroup.add(wheel);
+    });
+
+    const driverBody = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.72, 0.65), whiteMat);
+    driverBody.position.set(0, 0.05, -0.05);
+    driverBody.castShadow = true;
+
+    const driverHead = new THREE.Mesh(
+      new THREE.SphereGeometry(0.68, 20, 20),
+      new THREE.MeshStandardMaterial({ color: 0xffd34f, roughness: 0.8 })
+    );
+    driverHead.position.set(0, 0.92, 0.02);
+    driverHead.castShadow = true;
+
+    aiKartGroup.add(driverBody, driverHead);
+    aiKartGroup.scale.setScalar(0.9);
+    aiKartGroup.position.set(1.9, 0, -18);
+    scene.add(aiKartGroup);
   }
 
   function createMikanCharacter() {
@@ -405,6 +458,8 @@
     gameTime = 0;
     hitCooldown = 0;
     playerTargetX = 0;
+    aiDistance = 24;
+    aiSpeed = 19.6 + Math.random() * 0.8;
     keyState.left = false;
     keyState.right = false;
 
@@ -435,6 +490,7 @@
     moveTrack(speed * delta);
     moveRoadside(speed * delta);
     movePlayer(delta);
+    moveAIKart(delta, speed);
     moveEntities(speed, delta);
 
     if (spawnTimer > 0.9) {
@@ -459,6 +515,28 @@
     // カメラも少しだけ左右に追従。高さは変えない。
     camera.position.x += (playerGroup.position.x * 0.18 - camera.position.x) * Math.min(1, 4 * delta);
     camera.lookAt(playerGroup.position.x * 0.12, 0.25, -10);
+  }
+
+
+  function moveAIKart(delta, playerSpeed) {
+    if (!aiKartGroup) return;
+
+    aiDistance += aiSpeed * delta;
+    aiSpeed += (19.8 - aiSpeed) * 0.18 * delta;
+    aiSpeed += Math.sin(gameTime * 0.85) * 0.025;
+
+    const relative = aiDistance - distance;
+    aiKartGroup.position.z = 5.0 - relative;
+    aiKartGroup.position.x = 1.8 + Math.sin(gameTime * 0.55) * 0.55;
+    aiKartGroup.position.y = Math.sin(gameTime * 9 + 1.4) * 0.02;
+    aiKartGroup.rotation.z = Math.sin(gameTime * 0.55) * -0.035;
+
+    aiKartGroup.visible = aiKartGroup.position.z > -70 && aiKartGroup.position.z < 13;
+
+    if (relative < -12) {
+      aiDistance = distance + 28;
+      aiSpeed = 19.5 + Math.random() * 0.9;
+    }
   }
 
   function moveTrack(step) {
