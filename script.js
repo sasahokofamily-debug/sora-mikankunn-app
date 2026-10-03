@@ -343,7 +343,7 @@
     aiKartGroup.add(body, head, leftEye, rightEye, leftHand, rightHand);
 
     aiKartGroup.scale.setScalar(0.82);
-    aiKartGroup.position.set(1.7, 0, 5.0);
+    aiKartGroup.position.set(2.7, 0, 5.0);
     scene.add(aiKartGroup);
   }
 
@@ -593,7 +593,7 @@
 
     const relative = aiDistance - distance;
     aiKartGroup.position.z = 5.0 - relative;
-    aiKartGroup.position.x = 1.45 + Math.sin(gameTime * 0.42) * 0.28;
+    aiKartGroup.position.x = 2.7 + Math.sin(gameTime * 0.42) * 0.16;
     aiKartGroup.position.y = Math.sin(gameTime * 6.5 + 1.4) * 0.012;
     aiKartGroup.rotation.z = Math.sin(gameTime * 0.42) * -0.018;
     aiKartGroup.rotation.y = Math.sin(gameTime * 0.22) * 0.012;
