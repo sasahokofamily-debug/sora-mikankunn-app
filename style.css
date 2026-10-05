@@ -286,3 +286,14 @@ h1 {
 .boost-button:active {
   box-shadow: 0 2px 0 #1488a6;
 }
+
+
+.load-error {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  font-weight: 800;
+  color: #7a2a00;
+}
