@@ -80,7 +80,7 @@
     gameScreen.classList.remove('hidden');
 
     if (typeof THREE === 'undefined') {
-      canvasWrap.innerHTML = '<div style="height:100%;display:grid;place-items:center;text-align:center;padding:24px;font-weight:800;color:#7a2a00">three.js を読み込めませんでした。インターネット接続を確認して再読み込みしてね。</div>';
+      canvasWrap.innerHTML = '<div class="load-error">three.js を読み込めませんでした。再読み込みしてね。</div>';
       return;
     }
 
