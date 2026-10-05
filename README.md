@@ -25,3 +25,10 @@
 
 - `three.js` は CDN から読み込んでいます。
 - オフラインでは表示できない場合があります。
+
+
+## セキュリティ
+
+- three.js r152 は外部CDNではなく `vendor/three.min.js` を同梱
+- Content Security Policy (CSP) で外部スクリプト・外部通信を制限
+- Vercel配信時は `vercel.json` で追加のセキュリティヘッダーを設定
